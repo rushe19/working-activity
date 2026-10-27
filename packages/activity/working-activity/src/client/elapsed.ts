@@ -10,7 +10,7 @@
  * the elapsed counter.
  *
  * Safety: a segment is replaced only when it matches the shapes the host
- * emits (`总1m23s` / `total 5s` / a bare `87ms`). Any format drift on the
+ * emits (`总1m23s` / `total 5s` / `合計 5s` / a bare `87ms`). Any format drift on the
  * host side makes the matcher miss and the row falls back to the host's
  * (aging) text — stale, but never wrong. Settled `✓` lines carry a fixed
  * duration, not a counter, and are left alone. This module is deliberately
@@ -28,13 +28,13 @@ export interface ElapsedTickView {
   /** Wall clock the current turn began (the elapsed counter counts from it). */
   readonly turnStartedAt: number
   /** Language the host rendered `line` in. */
-  readonly lang: 'zh' | 'en'
+  readonly lang: 'zh' | 'en' | 'ja'
 }
 
 /** The duration shapes the host emits: `87ms`, `5s`, `1m23s`, `4h0m`. */
 const DURATION = /^\d+(?:ms|s|m\d+s|h\d+m)$/
-/** The localized elapsed segment: `总5s`, `total 1m23s`. */
-const ELAPSED = /^(?:总|total )\d+(?:ms|s|m\d+s|h\d+m)$/
+/** The localized elapsed segment: `总5s`, `total 1m23s`, `合計 5s`. */
+const ELAPSED = /^(?:总|total |合計 )\d+(?:ms|s|m\d+s|h\d+m)$/
 /** The segment separator the host composes the line with. */
 const SEP = ' · '
 
@@ -75,7 +75,11 @@ export function refreshElapsedSuffix(line: string, view: ElapsedTickView, nowMs:
   const elapsed = Math.max(0, nowMs - since)
   const replacement = view.phase === 'tool'
     ? formatCounter(elapsed)
-    : (view.lang === 'en' ? `total ${formatDuration(elapsed)}` : `总${formatDuration(elapsed)}`)
+    : view.lang === 'en'
+      ? `total ${formatDuration(elapsed)}`
+      : view.lang === 'ja'
+        ? `合計 ${formatDuration(elapsed)}`
+        : `总${formatDuration(elapsed)}`
   const segments = line.split(SEP)
   for (let i = segments.length - 1; i > 0; i--) {
     const segment = segments[i]

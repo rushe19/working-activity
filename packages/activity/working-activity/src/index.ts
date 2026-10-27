@@ -64,8 +64,8 @@ export type Config = {
   /** Inject the `⏵` self-narration contract into the system prompt and surface it. */
   narrate?: boolean
   /** UI language: `auto` follows `DSH_TUI_LANG` → `~/.dsh-tui/lang.json` →
-   *  OS locale → zh; `zh`/`en` pin the copy directly. */
-  lang?: 'auto' | 'zh' | 'en'
+   *  OS locale → zh; `zh`/`en`/`ja` pin the copy directly. */
+  lang?: 'auto' | 'zh' | 'en' | 'ja'
   /** Default frame preset name (informational for UI consumers; the TUI
    *  resolves the persisted `frames` choice itself). */
   frames?: string
@@ -99,7 +99,7 @@ export const Config: Schemastery<Config> = z.object({
   detailLimit: z.number().step(1).min(8).max(120).default(40),
   customActions: z.dict(z.array(z.string())).default({}),
   narrate: z.boolean().default(true),
-  lang: z.union(['auto', 'zh', 'en']).default('auto'),
+  lang: z.union(['auto', 'zh', 'en', 'ja']).default('auto'),
   frames: z.string().default(DEFAULT_PRESET),
   mode: z.union(['lively', 'minimal']).default('lively'),
   features: z.dict(z.boolean()).default({}),
@@ -126,7 +126,7 @@ interface ResolvedConfig {
   detailLimit: number
   customActions: Record<string, string[]>
   narrate: boolean
-  lang: 'auto' | 'zh' | 'en'
+  lang: 'auto' | 'zh' | 'en' | 'ja'
   frames: string
   mode: 'lively' | 'minimal'
   features: Record<string, boolean>

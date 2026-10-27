@@ -33,6 +33,15 @@ describe('refreshElapsedSuffix', () => {
     ).toBe('mulling it over · total 7s')
   })
 
+  it('re-ticks the Japanese segment in Japanese', () => {
+    expect(
+      refreshElapsedSuffix('ちょっと整理するね · 合計 5s', view({ lang: 'ja' }), BASE + 2_000),
+    ).toBe('ちょっと整理するね · 合計 7s')
+    expect(
+      refreshElapsedSuffix('ちょっと整理するね · 合計 5s', view({ lang: 'ja' }), BASE + 61_000),
+    ).toBe('ちょっと整理するね · 合計 1m6s')
+  })
+
   it('re-ticks a running tool counter even with trailing segments', () => {
     const line = '跑个命令 npm test · 800ms · git main · 工具x2'
     expect(refreshElapsedSuffix(line, view({ phase: 'tool', phaseStartedAt: BASE - 800 }), BASE + 3_200))

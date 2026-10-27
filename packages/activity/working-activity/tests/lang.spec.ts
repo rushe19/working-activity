@@ -71,6 +71,11 @@ describe('readLangFile probe cache', () => {
     expect(fs.readCalls).toBe(2)
   })
 
+  it('accepts a persisted ja (it used to be rejected and fall through to the zh default)', () => {
+    fs.text = '{"lang":"ja"}'
+    expect(readLangFile(1_000_000)).toBe('ja')
+  })
+
   it('caches a missing file instead of failing a probe per key', () => {
     fs.present = false
     expect(readLangFile(1_000_000)).toBeUndefined()

@@ -5,10 +5,11 @@
  * chain dsh-tui resolves (`DSH_TUI_LANG` env → `~/.dsh-tui/lang.json` → OS
  * locale → zh) is read here directly, so a `/lang en|zh` switch (or the
  * /settings language pick) hot-swaps this plugin's narration and status-line
- * copy on the next render tick.
+ * copy on the next render tick. `ja` is carried by `lang.ja.ts` (structural
+ * strings) and `phrases.ja.ts` (the playful pools).
  *
  * Resolution order:
- *   1. `setLangOverride()` — a plugin-level `lang: zh|en` config key
+ *   1. `setLangOverride()` — a plugin-level `lang: zh|en|ja` config key
  *      (cordis.yml) or an explicit test pin.
  *   2. `DSH_TUI_LANG` env var — pinned at process start.
  *   3. `~/.dsh-tui/lang.json` — the persisted dsh-tui choice, mtime-cached
@@ -26,11 +27,12 @@
 import { readFileSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { JA_TEXT } from './lang.ja.js'
 
-export type Lang = 'zh' | 'en'
+export type Lang = 'zh' | 'en' | 'ja'
 
 /** The languages shipped with the plugin, in display order. */
-export const LANGS = ['zh', 'en'] as const
+export const LANGS = ['zh', 'en', 'ja'] as const
 
 /** The dsh-tui prefs file this plugin mirrors (shared language contract). */
 const LANG_FILE = join(homedir(), '.dsh-tui', 'lang.json')
@@ -85,22 +87,26 @@ export function setLangOverride(lang: Lang | 'auto'): void {
 export function langNow(): Lang {
   if (override !== 'auto') return override
   const env = process.env.DSH_TUI_LANG
-  if (env === 'zh' || env === 'en') return env
+  if (isLang(env)) return env
   return readLangFile() ?? detectLocaleLang()
 }
 
-/** Translate a dictionary key, substituting `{{name}}` placeholders. */
+/**
+ * Translate a dictionary key, substituting `{{name}}` placeholders. `ja` reads
+ * `lang.ja.ts` and falls back to the English entry for a key it lacks.
+ */
 export function t(key: I18nKey, params: I18nParams = {}): string {
   const entry = dict[key] as { zh: string; en: string } | undefined
-  const template = entry?.[langNow()] ?? key
-  return template.replace(/\{\{(\w+)\}\}/g, (match, name: string) =>
+  const lang = langNow()
+  const template = lang === 'ja' ? (JA_TEXT[key] ?? entry?.en) : entry?.[lang]
+  return (template ?? key).replace(/\{\{(\w+)\}\}/g, (match, name: string) =>
     name in params ? String(params[name]) : match,
   )
 }
 
 /** Is a value a valid shipped language code? */
 export function isLang(value: unknown): value is Lang {
-  return value === 'zh' || value === 'en'
+  return value === 'zh' || value === 'en' || value === 'ja'
 }
 
 /**
@@ -180,6 +186,7 @@ export function detectLocaleLang(): Lang {
     ''
   const locale = raw.split('.')[0]?.toLowerCase() ?? ''
   if (locale.startsWith('zh')) return 'zh'
+  if (locale.startsWith('ja')) return 'ja'
   if (locale.startsWith('en')) return 'en'
   if (locale === 'c' || locale === 'posix') return 'en'
   return 'zh'

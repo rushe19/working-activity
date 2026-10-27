@@ -1,13 +1,15 @@
 /**
  * Copy pools for the working-activity status line: short, colloquial, playful
- * fragments with a "live person" vibe, in both Chinese and English. The zh
+ * fragments with a "live person" vibe, in Chinese, English and Japanese. The zh
  * pools are the original copy; the en pools mirror the same tone — deadpan,
- * meme-y, occasionally unhinged. Everything here is pure data + pure pickers;
- * the active language is resolved per pick via `langNow()`.
+ * meme-y, occasionally unhinged; the ja pools live in `phrases.ja.ts`.
+ * Everything here is pure data + pure pickers; the active language is
+ * resolved per pick via `langNow()`.
  * @module @deepseek-ai/dsh-working-activity/phrases
  */
 
 import { langNow } from './lang.js'
+import * as JA from './phrases.ja.js'
 import type { WaitingReason } from './activity-event.js'
 
 /** A pool of copy fragments. */
@@ -66,6 +68,12 @@ export function pickPhraseAt(entries: PhrasePool, seed: number, slot: number): s
 /** Draw from `entries`: deterministic when a slot is given, random otherwise. */
 function draw(entries: PhrasePool, previous: string | undefined, at: PhraseSlot | undefined): string {
   return at === undefined ? pickPhrase(entries, previous) : pickPhraseAt(entries, at.seed, at.slot)
+}
+
+/** The zh, en or ja variant of a pool by the active language. */
+function byLang<T>(zh: T, en: T, ja: T): T {
+  const lang = langNow()
+  return lang === 'en' ? en : lang === 'ja' ? ja : zh
 }
 
 // ── zh pools (original copy) ─────────────────────────────────────────────
@@ -450,10 +458,9 @@ export const EN_COMPACTION_START_PHRASES: readonly string[] = [
  * @param at - Slot (seed + window) making the pick reproducible.
  */
 export function waitingReasonPhrase(reason: WaitingReason, at?: PhraseSlot): string {
-  const en = langNow() === 'en'
-  if (reason === 'retry') return draw(en ? EN_RETRY_PHRASES : RETRY_PHRASES, undefined, at)
-  if (reason === 'approval') return draw(en ? EN_APPROVAL_PHRASES : APPROVAL_PHRASES, undefined, at)
-  return draw(en ? EN_COMPACTION_START_PHRASES : COMPACTION_START_PHRASES, undefined, at)
+  if (reason === 'retry') return draw(byLang(RETRY_PHRASES, EN_RETRY_PHRASES, JA.JA_RETRY_PHRASES), undefined, at)
+  if (reason === 'approval') return draw(byLang(APPROVAL_PHRASES, EN_APPROVAL_PHRASES, JA.JA_APPROVAL_PHRASES), undefined, at)
+  return draw(byLang(COMPACTION_START_PHRASES, EN_COMPACTION_START_PHRASES, JA.JA_COMPACTION_START_PHRASES), undefined, at)
 }
 
 /** Model-switch quips keyed by a lowercase substring of the model id. */
@@ -490,43 +497,42 @@ export const EN_MODEL_QUIPS: Readonly<Record<string, readonly string[]>> = {
 export function holidayPhrase(date: Date, at?: PhraseSlot): string | null {
   const mmdd = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
   const ymd = `${date.getFullYear()}-${mmdd}`
-  const en = langNow() === 'en'
   if (LUNAR_NEW_YEAR_DAYS[ymd] === true) {
-    return draw(en ? EN_LUNAR_NEW_YEAR_PHRASES : LUNAR_NEW_YEAR_PHRASES, undefined, at)
+    return draw(byLang(LUNAR_NEW_YEAR_PHRASES, EN_LUNAR_NEW_YEAR_PHRASES, JA.JA_LUNAR_NEW_YEAR_PHRASES), undefined, at)
   }
-  const pool = en ? EN_HOLIDAY_PHRASES[mmdd] : HOLIDAY_PHRASES[mmdd]
+  const pool = byLang(HOLIDAY_PHRASES, EN_HOLIDAY_PHRASES, JA.JA_HOLIDAY_PHRASES)[mmdd]
   if (pool !== undefined) return draw(pool, undefined, at)
   return null
 }
 
 /** Pick a rare easter-egg phrase in the active language. */
 export function rarePhrase(previous?: string, at?: PhraseSlot): string {
-  return draw(langNow() === 'en' ? EN_RARE_PHRASES : RARE_PHRASES, previous, at)
+  return draw(byLang(RARE_PHRASES, EN_RARE_PHRASES, JA.JA_RARE_PHRASES), previous, at)
 }
 
 /** Pick a weekend greeting in the active language. */
 export function weekendPhrase(previous?: string, at?: PhraseSlot): string {
-  return draw(langNow() === 'en' ? EN_WEEKEND_PHRASES : WEEKEND_PHRASES, previous, at)
+  return draw(byLang(WEEKEND_PHRASES, EN_WEEKEND_PHRASES, JA.JA_WEEKEND_PHRASES), previous, at)
 }
 
 /** Pick a post-interruption phrase in the active language. */
 export function continuePhrase(): string {
-  return pickPhrase(langNow() === 'en' ? EN_CONTINUE_PHRASES : CONTINUE_PHRASES)
+  return pickPhrase(byLang(CONTINUE_PHRASES, EN_CONTINUE_PHRASES, JA.JA_CONTINUE_PHRASES))
 }
 
 /** Pick a post-compaction phrase in the active language. */
 export function compactPhrase(): string {
-  return pickPhrase(langNow() === 'en' ? EN_COMPACT_PHRASES : COMPACT_PHRASES)
+  return pickPhrase(byLang(COMPACT_PHRASES, EN_COMPACT_PHRASES, JA.JA_COMPACT_PHRASES))
 }
 
 /** Pick an overflow phrase in the active language. */
 export function overflowPhrase(): string {
-  return pickPhrase(langNow() === 'en' ? EN_OVERFLOW_PHRASES : OVERFLOW_PHRASES)
+  return pickPhrase(byLang(OVERFLOW_PHRASES, EN_OVERFLOW_PHRASES, JA.JA_OVERFLOW_PHRASES))
 }
 
 /** Pick a compact-retry phrase in the active language. */
 export function compactRetryPhrase(): string {
-  return pickPhrase(langNow() === 'en' ? EN_COMPACT_RETRY_PHRASES : COMPACT_RETRY_PHRASES)
+  return pickPhrase(byLang(COMPACT_RETRY_PHRASES, EN_COMPACT_RETRY_PHRASES, JA.JA_COMPACT_RETRY_PHRASES))
 }
 
 /**
@@ -535,7 +541,7 @@ export function compactRetryPhrase(): string {
  */
 export function modelQuip(modelId: string): string | null {
   const lower = modelId.toLowerCase()
-  const quips = langNow() === 'en' ? EN_MODEL_QUIPS : MODEL_QUIPS
+  const quips = byLang(MODEL_QUIPS, EN_MODEL_QUIPS, JA.JA_MODEL_QUIPS)
   for (const [key, pool] of Object.entries(quips)) {
     if (lower.includes(key)) return pickPhrase(pool)
   }
@@ -594,14 +600,14 @@ export function isNight(hour: number): boolean {
   return hour >= 0 && hour < 6
 }
 
-/** The zh or en base thinking pool by the active language. */
+/** The base thinking tiers by the active language. */
 function thinkingPools(): readonly { atMs: number; pool: readonly string[] }[] {
-  return langNow() === 'en' ? EN_THINKING_TIERS : THINKING_TIERS
+  return byLang(THINKING_TIERS, EN_THINKING_TIERS, JA.JA_THINKING_TIERS)
 }
 
-/** The zh or en base waiting pool by the active language. */
+/** The base waiting pool by the active language. */
 export function waitingPool(): readonly string[] {
-  return langNow() === 'en' ? EN_WAITING_PHRASES : WAITING_PHRASES
+  return byLang(WAITING_PHRASES, EN_WAITING_PHRASES, JA.JA_WAITING_PHRASES)
 }
 
 /**
@@ -613,7 +619,8 @@ export function waitingPool(): readonly string[] {
  * @param extra - User custom phrases appended to the base (non-tier) pool.
  */
 export function thinkingPhrase(elapsedMs: number, previous?: string, night = false, extra?: readonly string[], at?: PhraseSlot): string {
-  let pool: readonly string[] = langNow() === 'en' ? EN_THINKING_PHRASES : THINKING_PHRASES
+  const base = byLang(THINKING_PHRASES, EN_THINKING_PHRASES, JA.JA_THINKING_PHRASES)
+  let pool: readonly string[] = base
   for (const tier of thinkingPools()) {
     if (elapsedMs >= tier.atMs) {
       pool = tier.pool
@@ -625,8 +632,8 @@ export function thinkingPhrase(elapsedMs: number, previous?: string, night = fal
   if (extra !== undefined && extra.length > 0) {
     pool = [...pool, ...extra]
   }
-  if (night && pool === (langNow() === 'en' ? EN_THINKING_PHRASES : THINKING_PHRASES)) {
-    const nightPool = langNow() === 'en' ? EN_NIGHT_PHRASES : NIGHT_PHRASES
+  if (night && pool === base) {
+    const nightPool = byLang(NIGHT_PHRASES, EN_NIGHT_PHRASES, JA.JA_NIGHT_PHRASES)
     return draw([...pool, ...nightPool], previous, at)
   }
   return draw(pool, previous, at)
@@ -657,17 +664,17 @@ export const EN_TOOL_OPENING_PHRASES: readonly string[] = [
 
 /** Pick the thinking→doing opening line in the active language. */
 export function toolOpeningPhrase(at?: PhraseSlot): string {
-  return draw(langNow() === 'en' ? EN_TOOL_OPENING_PHRASES : TOOL_OPENING_PHRASES, undefined, at)
+  return draw(byLang(TOOL_OPENING_PHRASES, EN_TOOL_OPENING_PHRASES, JA.JA_TOOL_OPENING_PHRASES), undefined, at)
 }
 
 /** Pick a tool-failure phrase in the active language. */
 export function failPhrase(): string {
-  return pickPhrase(langNow() === 'en' ? EN_FAIL_PHRASES : FAIL_PHRASES)
+  return pickPhrase(byLang(FAIL_PHRASES, EN_FAIL_PHRASES, JA.JA_FAIL_PHRASES))
 }
 
 /** Pick a turn-completion phrase in the active language. */
 export function donePhrase(): string {
-  return pickPhrase(langNow() === 'en' ? EN_DONE_PHRASES : DONE_PHRASES)
+  return pickPhrase(byLang(DONE_PHRASES, EN_DONE_PHRASES, JA.JA_DONE_PHRASES))
 }
 
 /**
@@ -680,8 +687,8 @@ export function actionFor(toolName: string, custom?: Readonly<Record<string, rea
   const normalized = toolName.trim().toLowerCase()
   const customPool = custom?.[normalized]
   if (customPool !== undefined && customPool.length > 0) return pickPhrase(customPool)
-  const map = langNow() === 'en' ? EN_ACTION_MAP : ACTION_MAP
-  const fallback = langNow() === 'en' ? EN_FALLBACK_ACTIONS : FALLBACK_ACTIONS
+  const map = byLang(ACTION_MAP, EN_ACTION_MAP, JA.JA_ACTION_MAP)
+  const fallback = byLang(FALLBACK_ACTIONS, EN_FALLBACK_ACTIONS, JA.JA_FALLBACK_ACTIONS)
   for (const { test, actions } of map) {
     if (test.test(normalized)) return pickPhrase(actions)
   }

@@ -118,7 +118,7 @@ const viewSchema = z.object({
   phaseStartedAt: z.number(),
   turnStartedAt: z.number(),
   updatedAt: z.number(),
-  lang: z.enum(['zh', 'en']),
+  lang: z.enum(['zh', 'en', 'ja']),
 })
 
 /** What a live host can overlay onto the folded value (any subset). */

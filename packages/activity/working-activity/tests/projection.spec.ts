@@ -22,6 +22,7 @@ import {
   THINKING_PHRASES, WAITING_PHRASES, EN_THINKING_PHRASES, EN_WAITING_PHRASES,
   THINKING_TIERS, EN_THINKING_TIERS,
 } from '../src/phrases.ts'
+import { JA_WAITING_PHRASES } from '../src/phrases.ja.ts'
 
 const CONFIG: TrackerConfig = { phrases: true, detailLimit: 40, showIdle: false }
 const START = new Date('2026-03-16T12:00:00').getTime()
@@ -344,5 +345,23 @@ describe('the waiting pool ends when output exists', () => {
     const viewed = projection.view(state) as WorkingActivityView
     expect(viewed.phase).toBe('thinking')
     expect(thinking.has(viewed.phrase ?? ''), `thinking phrase expected, got ${viewed.phrase}`).toBe(true)
+  })
+})
+
+describe('a ja projection', () => {
+  it('renders the line in Japanese and the wire schema accepts lang ja', () => {
+    setLangOverride('ja')
+    const projection = createActivityProjection({
+      trackerConfig: CONFIG,
+      now: () => START + 5_000,
+      lang: () => 'ja',
+    })
+    const state = projection.apply(projection.init(), event('turn/start', START, { turn: 1 }))
+    const view = projection.view(state) as WorkingActivityView
+    expect(view.lang).toBe('ja')
+    expect(view.phase).toBe('waiting')
+    expect(JA_WAITING_PHRASES).toContain(view.phrase)
+    expect(view.line).toBe(`${view.phrase} · 合計 5s`)
+    expect(() => projection.wire.viewSchema.parse(view)).not.toThrow()
   })
 })
